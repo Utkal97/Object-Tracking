@@ -66,33 +66,19 @@ img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 img2 = cv2.imread("basketball2.png")
 img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-u, v = optical_flow( img1, img2, 3, 0.05)
-print("Got U and V")
+_v, _u = optical_flow( img1, img2, 3, 0.05)
 
-displacement = np.ones_like(img2)
-displacement.fill(255.)             #Fill the displacement plot with White background
-line_color =  (10, 10, 10)
-
-# draw the displacement vectors on the white background
+img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2RGB)
 for i in range(img2.shape[0]):
-	for j in range(img2.shape[1]):
+    for j in range(img2.shape[1]):
+        u, v = _u[i][j], _v[i][j]
+        if u and v:
+            img2 = cv2.arrowedLine(img2, 
+                                    (i, j), (np.ceil(i+u).astype('int64'), np.ceil(j+v).astype('int64')),
+                                    (0, 255, 0),
+                                    thickness=1
+                                )
+cv2.imshow('Optical Flow', img2)
+cv2.waitKey(0)
 
-		start_pixel = (i,j)
-		end_pixel = ( int(i+u[i][j]), int(j+v[i][j]) )
-
-        #check if there is displacement for the corner and endpoint is in range
-		if u[i][j] and v[i][j] and inRange( end_pixel, img2.shape ):     
-			displacement = cv2.line( displacement, start_pixel, end_pixel, line_color, thickness=2)
-
-
-figure, axes = plt.subplots(1,3)
-axes[0].imshow(img1, cmap = "gray")
-axes[0].set_title("first image")
-axes[1].imshow(img2, cmap = "gray")
-axes[1].set_title("second image")
-axes[2].imshow(displacement, cmap = "gray")
-axes[2].set_title("displacements")
-figure.tight_layout()
-plt.savefig("r1", bbox_inches = "tight", dpi = 200)
-
-# plt.show(bbox_inches = "tight", dpi = 200, pad=10)
+cv2.imwrite('results.png', img2)
