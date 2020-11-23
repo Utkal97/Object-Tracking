@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import signal
 import cv2
 import matplotlib.pyplot as plt
 
@@ -59,26 +58,68 @@ def optical_flow(old_frame, new_frame, window_size, min_quality=0.01):
     return (u,v)
 
 
+'''
+Draw the displacement vectors on the image, given (u,v) and save it to the output filepath provided
+'''
+def drawOnFrame(frame, U, V, output_file):
 
-img1 = cv2.imread("basketball1.png")
+    line_color = (0, 255, 0) #  Green
+
+    for i in range(frame.shape[0]):
+        for j in range(frame.shape[1]):
+            u, v = U[i][j], V[i][j]
+
+            if u and v:
+                frame = cv2.arrowedLine( frame, (i, j), (int(round(i+u)), int(round(j+v))),
+                                        (0, 255, 0),
+                                        thickness=1
+                                    )
+    cv2.imwrite(output_file, frame)
+
+
+'''
+Create a plot of the displacement vectors given (u,v) and plot the two images and displacement in a row.
+Save the plot to given output filepath
+'''
+def drawSeperately(old_frame, new_frame, U, V, output_file):
+
+    displacement = np.ones_like(img2)
+    displacement.fill(255.)             #Fill the displacement plot with White background
+    line_color =  (0, 0, 0)
+    # draw the displacement vectors
+    for i in range(img2.shape[0]):
+        for j in range(img2.shape[1]):
+
+            start_pixel = (i,j)
+            end_pixel = ( int(i+U[i][j]), int(j+V[i][j]) )
+
+            #check if there is displacement for the corner and endpoint is in range
+            if U[i][j] and V[i][j] and inRange( end_pixel, img1.shape ):     
+                displacement = cv2.arrowedLine( displacement, start_pixel, end_pixel, line_color, thickness =2)
+
+    figure, axes = plt.subplots(1,3)
+    axes[0].imshow(old_frame, cmap = "gray")
+    axes[0].set_title("first image")
+    axes[1].imshow(new_frame, cmap = "gray")
+    axes[1].set_title("second image")
+    axes[2].imshow(displacement, cmap = "gray")
+    axes[2].set_title("displacements")
+    figure.tight_layout()
+    plt.savefig(output_file, bbox_inches = "tight", dpi = 200)
+
+
+
+#   Read Input
+img1 = cv2.imread("./Inputs/grove1.png")
 img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 
-img2 = cv2.imread("basketball2.png")
+img2 = cv2.imread("./Inputs/grove2.png")
 img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-_v, _u = optical_flow( img1, img2, 3, 0.05)
+# Obtain (u,v) from Lucas Kanade's optical flow approach
+U, V = optical_flow( img1, img2, 3, 0.05)
 
-img2 = cv2.cvtColor(img2, cv2.COLOR_GRAY2RGB)
-for i in range(img2.shape[0]):
-    for j in range(img2.shape[1]):
-        u, v = _u[i][j], _v[i][j]
-        if u and v:
-            img2 = cv2.arrowedLine(img2, 
-                                    (i, j), (np.ceil(i+u).astype('int64'), np.ceil(j+v).astype('int64')),
-                                    (0, 255, 0),
-                                    thickness=1
-                                )
-cv2.imshow('Optical Flow', img2)
-cv2.waitKey(0)
-
-cv2.imwrite('results.png', img2)
+# Save results
+img2 = cv2.cvtColor( img2, cv2.COLOR_GRAY2RGB)
+drawSeperately(img1, img2, U, V, "./Results/Grove_Seperate_Result.png")
+drawOnFrame(img2, U, V, './Results/Grove_Result.png')
